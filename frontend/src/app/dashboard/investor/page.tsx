@@ -1,185 +1,291 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import type React from "react"
+
+import { useState, useEffect } from "react"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
-import { MessageSquare, Users } from "lucide-react"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { AlertCircle } from "lucide-react"
+import ProtectedRoute from "@/components/protected-route"
+import { getProfile, updateProfile, type ProfileData } from "@/services/profile-service"
+import { useAuth } from "@/contexts/auth-context"
 
-// Mock data for entrepreneurs
-const mockEntrepreneurs = [
-  {
-    id: "1",
-    name: "Sarah Johnson",
-    startup: "EcoTech Solutions",
-    pitch: "Developing sustainable technology solutions for reducing carbon footprint in urban areas.",
-    initials: "SJ",
-  },
-  {
-    id: "2",
-    name: "Michael Chen",
-    startup: "HealthAI",
-    pitch: "AI-powered healthcare diagnostics platform for early disease detection.",
-    initials: "MC",
-  },
-  {
-    id: "3",
-    name: "Jessica Williams",
-    startup: "FinLedger",
-    pitch: "Blockchain-based financial management system for small businesses.",
-    initials: "JW",
-  },
-]
-
-export default function InvestorDashboard() {
-  const [entrepreneurs, setEntrepreneurs] = useState(mockEntrepreneurs)
+export default function InvestorProfilePage() {
+  const { user } = useAuth()
+  const [profile, setProfile] = useState<ProfileData>({
+    name: "",
+    bio: "",
+    location: "",
+    company: "",
+    investmentInterests: "",
+    investmentRange: "",
+  })
   const [isLoading, setIsLoading] = useState(true)
+  const [isEditing, setIsEditing] = useState(false)
+  const [formData, setFormData] = useState<ProfileData>({ name: "" })
+  const [error, setError] = useState("")
+  const [success, setSuccess] = useState("")
 
   useEffect(() => {
-    // Simulate API call
-    const fetchEntrepreneurs = async () => {
-      // In a real app, you would fetch data from your API
-      // const response = await fetch('/api/entrepreneurs');
-      // const data = await response.json();
-      // setEntrepreneurs(data);
-
-      // Using mock data for now
-      setTimeout(() => {
-        setEntrepreneurs(mockEntrepreneurs)
+    const fetchProfile = async () => {
+      try {
+        const data = await getProfile()
+        setProfile(data)
+        setFormData(data)
+      } catch (error) {
+        console.error("Failed to fetch profile:", error)
+        setError("Failed to load profile data")
+      } finally {
         setIsLoading(false)
-      }, 1000)
+      }
     }
 
-    fetchEntrepreneurs()
+    fetchProfile()
   }, [])
 
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target
+    setFormData((prev) => ({ ...prev, [name]: value }))
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError("")
+    setSuccess("")
+
+    try {
+      const updatedProfile = await updateProfile(formData)
+      setProfile(updatedProfile)
+      setIsEditing(false)
+      setSuccess("Profile updated successfully")
+
+      // Clear success message after 3 seconds
+      setTimeout(() => setSuccess(""), 3000)
+    } catch (err: any) {
+      setError(err.message || "Failed to update profile")
+    }
+  }
+
+  // Get initials for avatar
+  const getInitials = (name: string): string => {
+    return name
+      .split(" ")
+      .map((part) => part[0])
+      .join("")
+      .toUpperCase()
+      .substring(0, 2)
+  }
+
+  if (isLoading) {
+    return (
+      <ProtectedRoute allowedRoles={["investor"]}>
+        <DashboardLayout userRole="investor">
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center">
+              <div className="h-16 w-16 animate-spin rounded-full border-b-2 border-t-2 border-primary mx-auto"></div>
+              <p className="mt-4 text-lg">Loading profile...</p>
+            </div>
+          </div>
+        </DashboardLayout>
+      </ProtectedRoute>
+    )
+  }
+
   return (
-    <DashboardLayout userRole="investor">
-      <div className="space-y-8">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Investor Dashboard</h1>
-          <p className="text-muted-foreground">Welcome back! Here's a list of entrepreneurs looking for investment.</p>
-        </div>
-
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Entrepreneurs</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{entrepreneurs.length}</div>
-              <p className="text-xs text-muted-foreground">Entrepreneurs looking for investment</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Collaboration Requests</CardTitle>
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                className="h-4 w-4 text-muted-foreground"
-              >
-                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-                <circle cx="9" cy="7" r="4" />
-                <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-              </svg>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">0</div>
-              <p className="text-xs text-muted-foreground">Active collaboration requests</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Messages</CardTitle>
-              <MessageSquare className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">0</div>
-              <p className="text-xs text-muted-foreground">Unread messages</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="space-y-4">
+    <ProtectedRoute allowedRoles={["investor"]}>
+      <DashboardLayout userRole="investor">
+        <div className="space-y-6">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold">Entrepreneurs</h2>
-            <Button variant="outline" size="sm">
-              View All
-            </Button>
+            <h1 className="text-3xl font-bold tracking-tight">Profile</h1>
+            {!isEditing && <Button onClick={() => setIsEditing(true)}>Edit Profile</Button>}
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {isLoading
-              ? Array(3)
-                  .fill(0)
-                  .map((_, i) => (
-                    <Card key={i} className="overflow-hidden">
-                      <CardHeader className="p-4">
-                        <div className="flex items-center gap-3">
-                          <div className="h-10 w-10 animate-pulse rounded-full bg-muted"></div>
-                          <div className="space-y-2">
-                            <div className="h-4 w-24 animate-pulse rounded bg-muted"></div>
-                            <div className="h-3 w-32 animate-pulse rounded bg-muted"></div>
-                          </div>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="p-4 pt-0">
+          {error && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
+          {success && (
+            <Alert variant="success" className="bg-green-50 text-green-800 border-green-200">
+              <AlertDescription>{success}</AlertDescription>
+            </Alert>
+          )}
+
+          <Tabs defaultValue="profile">
+            <TabsList>
+              <TabsTrigger value="profile">Profile</TabsTrigger>
+              <TabsTrigger value="portfolio">Portfolio</TabsTrigger>
+              <TabsTrigger value="settings">Settings</TabsTrigger>
+            </TabsList>
+            <TabsContent value="profile" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Profile Information</CardTitle>
+                  <CardDescription>Your public profile information visible to entrepreneurs</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {isEditing ? (
+                    <form onSubmit={handleSubmit} className="space-y-4">
+                      <div className="flex items-center gap-4">
+                        <Avatar className="h-20 w-20">
+                          <AvatarImage src="/placeholder.svg" alt={profile.name} />
+                          <AvatarFallback className="text-lg">{getInitials(profile.name)}</AvatarFallback>
+                        </Avatar>
+                        <Button variant="outline" type="button">
+                          Change Avatar
+                        </Button>
+                      </div>
+
+                      <div className="grid gap-4 md:grid-cols-2">
                         <div className="space-y-2">
-                          <div className="h-3 w-full animate-pulse rounded bg-muted"></div>
-                          <div className="h-3 w-full animate-pulse rounded bg-muted"></div>
-                          <div className="h-3 w-2/3 animate-pulse rounded bg-muted"></div>
+                          <Label htmlFor="name">Full Name</Label>
+                          <Input id="name" name="name" value={formData.name} onChange={handleChange} />
                         </div>
-                        <div className="mt-4 flex justify-end gap-2">
-                          <div className="h-9 w-24 animate-pulse rounded bg-muted"></div>
-                          <div className="h-9 w-24 animate-pulse rounded bg-muted"></div>
+                        <div className="space-y-2">
+                          <Label htmlFor="email">Email</Label>
+                          <Input id="email" name="email" type="email" value={user?.email || ""} disabled />
                         </div>
-                      </CardContent>
-                    </Card>
-                  ))
-              : entrepreneurs.map((entrepreneur) => (
-                  <Card key={entrepreneur.id}>
-                    <CardHeader className="p-4">
-                      <div className="flex items-center gap-3">
-                        <Avatar>
-                          <AvatarImage src="/placeholder.svg" alt={entrepreneur.name} />
-                          <AvatarFallback>{entrepreneur.initials}</AvatarFallback>
+                        <div className="space-y-2">
+                          <Label htmlFor="company">Company/Firm</Label>
+                          <Input id="company" name="company" value={formData.company || ""} onChange={handleChange} />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="location">Location</Label>
+                          <Input
+                            id="location"
+                            name="location"
+                            value={formData.location || ""}
+                            onChange={handleChange}
+                          />
+                        </div>
+                        <div className="space-y-2 md:col-span-2">
+                          <Label htmlFor="bio">Bio</Label>
+                          <Textarea id="bio" name="bio" value={formData.bio || ""} onChange={handleChange} rows={4} />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="investmentInterests">Investment Interests</Label>
+                          <Input
+                            id="investmentInterests"
+                            name="investmentInterests"
+                            value={formData.investmentInterests || ""}
+                            onChange={handleChange}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="investmentRange">Investment Range</Label>
+                          <Input
+                            id="investmentRange"
+                            name="investmentRange"
+                            value={formData.investmentRange || ""}
+                            onChange={handleChange}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => {
+                            setFormData(profile)
+                            setIsEditing(false)
+                          }}
+                        >
+                          Cancel
+                        </Button>
+                        <Button type="submit">Save Changes</Button>
+                      </div>
+                    </form>
+                  ) : (
+                    <div className="space-y-6">
+                      <div className="flex items-center gap-4">
+                        <Avatar className="h-20 w-20">
+                          <AvatarImage src="/placeholder.svg" alt={profile.name} />
+                          <AvatarFallback className="text-lg">{getInitials(profile.name)}</AvatarFallback>
                         </Avatar>
                         <div>
-                          <CardTitle className="text-base">{entrepreneur.name}</CardTitle>
-                          <CardDescription className="flex items-center gap-1">
-                            {entrepreneur.startup}
-                            <Badge variant="outline" className="ml-2">
-                              Startup
-                            </Badge>
-                          </CardDescription>
+                          <h3 className="text-xl font-semibold">{profile.name}</h3>
+                          <p className="text-muted-foreground">{profile.company || "Independent Investor"}</p>
+                          <p className="text-sm text-muted-foreground">{profile.location || "No location provided"}</p>
                         </div>
                       </div>
-                    </CardHeader>
-                    <CardContent className="p-4 pt-0">
-                      <p className="text-sm text-muted-foreground">{entrepreneur.pitch}</p>
-                      <div className="mt-4 flex justify-end gap-2">
-                        <Button variant="outline" size="sm">
-                          <MessageSquare className="mr-2 h-4 w-4" />
-                          Message
-                        </Button>
-                        <Button size="sm">Connect</Button>
+
+                      <div>
+                        <h4 className="font-medium">Bio</h4>
+                        <p className="mt-1 text-muted-foreground">{profile.bio || "No bio provided"}</p>
                       </div>
-                    </CardContent>
-                  </Card>
-                ))}
-          </div>
+
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <div>
+                          <h4 className="font-medium">Investment Interests</h4>
+                          <p className="mt-1 text-muted-foreground">
+                            {profile.investmentInterests || "No investment interests provided"}
+                          </p>
+                        </div>
+                        <div>
+                          <h4 className="font-medium">Investment Range</h4>
+                          <p className="mt-1 text-muted-foreground">
+                            {profile.investmentRange || "No investment range provided"}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+            <TabsContent value="portfolio" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Portfolio Companies</CardTitle>
+                  <CardDescription>Companies you have invested in</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="rounded-lg border p-8 text-center">
+                    <h3 className="text-lg font-semibold">No Portfolio Companies Yet</h3>
+                    <p className="mt-2 text-sm text-muted-foreground">You haven't added any portfolio companies yet.</p>
+                    <Button className="mt-4">Add Company</Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+            <TabsContent value="settings" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Account Settings</CardTitle>
+                  <CardDescription>Manage your account settings and preferences</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <h3 className="font-medium">Email Notifications</h3>
+                    <p className="text-sm text-muted-foreground">Configure your email notification preferences</p>
+                    <Button variant="outline">Manage Notifications</Button>
+                  </div>
+                  <div className="space-y-2">
+                    <h3 className="font-medium">Password</h3>
+                    <p className="text-sm text-muted-foreground">Change your password</p>
+                    <Button variant="outline">Change Password</Button>
+                  </div>
+                  <div className="space-y-2">
+                    <h3 className="font-medium text-destructive">Danger Zone</h3>
+                    <p className="text-sm text-muted-foreground">Delete your account and all your data</p>
+                    <Button variant="destructive">Delete Account</Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
         </div>
-      </div>
-    </DashboardLayout>
+      </DashboardLayout>
+    </ProtectedRoute>
   )
 }
