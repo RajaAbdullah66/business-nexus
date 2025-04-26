@@ -1,128 +1,106 @@
-// This is a mock service for authentication
-// In a real application, this would make API calls to your backend
+import { API_BASE_URL } from "@/lib/config"
 
 interface LoginCredentials {
-    email: string
-    password: string
+  email: string
+  password: string
+}
+
+interface RegisterData {
+  name: string
+  email: string
+  password: string
+  role: "entrepreneur" | "investor"
+}
+
+interface User {
+  id: string
+  name: string
+  email: string
+  role: "entrepreneur" | "investor"
+}
+
+interface AuthResponse {
+  token: string
+  user: User
+}
+
+export async function loginUser(credentials: LoginCredentials): Promise<AuthResponse> {
+  const response = await fetch(`${API_BASE_URL}/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(credentials),
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.message || "Login failed")
   }
-  
-  interface RegisterData {
-    name: string
-    email: string
-    password: string
-    role: "entrepreneur" | "investor"
-  }
-  
-  interface User {
-    id: string
-    name: string
-    email: string
-    role: "entrepreneur" | "investor"
-  }
-  
-  interface AuthResponse {
-    token: string
-    user: User
-  }
-  
-  // Mock user database
-  const users: User[] = [
-    {
-      id: "1",
-      name: "John Doe",
-      email: "john@example.com",
-      role: "entrepreneur",
+
+  const data = await response.json()
+  return {
+    token: data.token,
+    user: {
+      id: data.user._id,
+      name: data.user.name,
+      email: data.user.email,
+      role: data.user.role,
     },
-    {
-      id: "2",
-      name: "Jane Smith",
-      email: "jane@example.com",
-      role: "investor",
+  }
+}
+
+export async function registerUser(data: RegisterData): Promise<AuthResponse> {
+  const response = await fetch(`${API_BASE_URL}/auth/register`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.message || "Registration failed")
+  }
+
+  const responseData = await response.json()
+  return {
+    token: responseData.token,
+    user: {
+      id: responseData.user._id,
+      name: responseData.user.name,
+      email: responseData.user.email,
+      role: responseData.user.role,
     },
-  ]
-  
-  export async function loginUser(credentials: LoginCredentials): Promise<AuthResponse> {
-    // Simulate API request delay
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-  
-    // In a real app, this would be a fetch request to your API
-    // const response = await fetch('/api/auth/login', {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify(credentials),
-    // });
-    // return response.json();
-  
-    // Mock implementation
-    const user = users.find((u) => u.email === credentials.email)
-  
-    if (!user) {
-      throw new Error("Invalid credentials")
+  }
+}
+
+export async function getCurrentUser(): Promise<User | null> {
+  const token = localStorage.getItem("token")
+
+  if (!token) {
+    return null
+  }
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/auth/me`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch user")
     }
-  
-    // In a real app, you would verify the password here
-    // For demo purposes, we'll accept any password
-  
+
+    const data = await response.json()
     return {
-      token: "mock-jwt-token",
-      user,
+      id: data.user._id,
+      name: data.user.name,
+      email: data.user.email,
+      role: data.user.role,
     }
+  } catch (error) {
+    console.error("Error fetching current user:", error)
+    return null
   }
-  
-  export async function registerUser(data: RegisterData): Promise<AuthResponse> {
-    // Simulate API request delay
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-  
-    // In a real app, this would be a fetch request to your API
-    // const response = await fetch('/api/auth/register', {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify(data),
-    // });
-    // return response.json();
-  
-    // Mock implementation
-    // Check if user already exists
-    if (users.some((u) => u.email === data.email)) {
-      throw new Error("User already exists")
-    }
-  
-    // Create new user
-    const newUser: User = {
-      id: (users.length + 1).toString(),
-      name: data.name,
-      email: data.email,
-      role: data.role,
-    }
-  
-    // In a real app, you would save this user to your database
-    users.push(newUser)
-  
-    return {
-      token: "mock-jwt-token",
-      user: newUser,
-    }
-  }
-  
-  export async function getCurrentUser(): Promise<User | null> {
-    // Simulate API request delay
-    await new Promise((resolve) => setTimeout(resolve, 500))
-  
-    // In a real app, this would be a fetch request to your API
-    // const response = await fetch('/api/auth/me', {
-    //   headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
-    // });
-    // if (response.ok) {
-    //   return response.json();
-    // }
-    // return null;
-  
-    // Mock implementation
-    // For demo purposes, we'll return the first user
-    return users[0]
-  }
-  
-  export function logout(): void {
-    // In a real app, you might want to invalidate the token on the server
-    localStorage.removeItem("token")
-  }
+}
+
+export function logout(): void {
+  localStorage.removeItem("token")
+}
