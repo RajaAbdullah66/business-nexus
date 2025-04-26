@@ -5,7 +5,7 @@ import type React from "react"
 import { useState, useEffect } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import Link from "next/link"
-import { Building2, ChevronDown, Home, LogOut, MessageSquare, Settings, User, Users } from 'lucide-react'
+import { Building2, ChevronDown, Home, LogOut, MessageSquare, Settings, User, Users } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {

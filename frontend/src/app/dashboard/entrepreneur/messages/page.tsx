@@ -217,4 +217,92 @@ export default function EntrepreneurMessagesPage() {
                           <h3 className="font-medium">
                             {conversations.find((c) => c.user.id === selectedConversation)?.user.name}
                           </h3>
-                          <p className="text\
+                          <p className="text-sm text-muted-foreground">
+                            {conversations.find((c) => c.user.id === selectedConversation)?.user.email}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex-1 h-[calc(80vh-13rem)] overflow-y-auto p-4 space-y-4">
+                    {messages.length > 0 ? (
+                      messages.map((message) => (
+                        <div
+                          key={message.id}
+                          className={`flex items-start gap-3 ${
+                            message.sender.id === user?.id ? "justify-end" : ""
+                          }`}
+                        >
+                          {message.sender.id !== user?.id && (
+                            <Avatar>
+                              <AvatarImage src="/placeholder.svg" alt={message.sender.name} />
+                              <AvatarFallback>{getInitials(message.sender.name)}</AvatarFallback>
+                            </Avatar>
+                          )}
+                          <div className={`flex flex-col max-w-[70%] ${message.sender.id === user?.id ? "items-end" : ""}`}>
+                            {message.sender.id !== user?.id && (
+                              <p className="font-medium">{message.sender.name}</p>
+                            )}
+                            <div className={`px-3 py-2 rounded-lg ${
+                              message.sender.id === user?.id 
+                                ? "bg-primary text-primary-foreground" 
+                                : "bg-muted"
+                            }`}>
+                              <p className="text-sm">{message.content}</p>
+                            </div>
+                          </div>
+                          {message.sender.id === user?.id && (
+                            <Avatar>
+                              <AvatarImage src="/placeholder.svg" alt={message.sender.name} />
+                              <AvatarFallback>{getInitials(message.sender.name)}</AvatarFallback>
+                            </Avatar>
+                          )}
+                        </div>
+                      ))
+                    ) : (
+                      <div className="flex flex-col items-center justify-center h-full p-4 text-center">
+                        <p className="text-muted-foreground">No messages yet</p>
+                        <p className="text-sm text-muted-foreground">
+                          Start the conversation with your connection
+                        </p>
+                      </div>
+                    )}
+                    <div ref={messagesEndRef} />
+                  </div>
+
+                  <div className="p-4 border-t flex items-center gap-3">
+                    <input
+                      type="text"
+                      value={newMessage}
+                      onChange={(e) => setNewMessage(e.target.value)}
+                      placeholder="Type a message..."
+                      className="flex-1 p-2 border rounded-md"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          handleSendMessage()
+                        }
+                      }}
+                    />
+                    <button
+                      onClick={handleSendMessage}
+                      className="bg-primary text-white px-4 py-2 rounded-md"
+                      disabled={!newMessage.trim()}
+                    >
+                      Send
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-full p-4 text-center">
+                  <p className="text-muted-foreground">Select a conversation to start messaging</p>
+                  <p className="text-sm text-muted-foreground">Click on a conversation from the list</p>
+                </div>
+              )}
+            </Card>
+          </div>
+        </div>
+      </DashboardLayout>
+    </ProtectedRoute>
+  )
+}

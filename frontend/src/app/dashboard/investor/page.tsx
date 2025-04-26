@@ -115,9 +115,10 @@ export default function InvestorProfilePage() {
           )}
 
           {success && (
-            <Alert variant="success" className="bg-green-50 text-green-800 border-green-200">
-              <AlertDescription>{success}</AlertDescription>
-            </Alert>
+            <Alert className="bg-green-50 text-green-800 border-green-200">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{success}</AlertDescription>
+          </Alert>
           )}
 
           <Tabs defaultValue="profile">
