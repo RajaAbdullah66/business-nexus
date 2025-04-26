@@ -27,6 +27,48 @@ const userSchema = new mongoose.Schema(
       enum: ["entrepreneur", "investor"],
       required: [true, "Please specify your role"],
     },
+    bio: {
+      type: String,
+      default: "",
+    },
+    location: {
+      type: String,
+      default: "",
+    },
+    // Entrepreneur specific fields
+    startup: {
+      type: String,
+      default: "",
+    },
+    startupDescription: {
+      type: String,
+      default: "",
+    },
+    industry: {
+      type: String,
+      default: "",
+    },
+    fundingNeeded: {
+      type: String,
+      default: "",
+    },
+    foundedYear: {
+      type: String,
+      default: "",
+    },
+    // Investor specific fields
+    company: {
+      type: String,
+      default: "",
+    },
+    investmentInterests: {
+      type: String,
+      default: "",
+    },
+    investmentRange: {
+      type: String,
+      default: "",
+    },
     createdAt: {
       type: Date,
       default: Date.now,
