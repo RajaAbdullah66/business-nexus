@@ -7,61 +7,90 @@ import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Check, MessageSquare, Users, X } from "lucide-react"
-
-// Mock data for collaboration requests
-const mockRequests = [
-  {
-    id: "1",
-    investor: {
-      id: "1",
-      name: "Robert Smith",
-      company: "Venture Capital Partners",
-      initials: "RS",
-    },
-    status: "pending",
-    createdAt: "2023-04-15T10:30:00Z",
-  },
-  {
-    id: "2",
-    investor: {
-      id: "2",
-      name: "Emily Chen",
-      company: "Angel Investors Group",
-      initials: "EC",
-    },
-    status: "pending",
-    createdAt: "2023-04-14T14:45:00Z",
-  },
-]
+import { useRouter } from "next/navigation"
+import { getConnectionRequests, updateConnectionStatus, type ConnectionRequest } from "@/services/connection-service"
+import { createChatRoom } from "@/services/chat-service"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { AlertCircle } from "lucide-react"
 
 export default function EntrepreneurDashboard() {
-  const [requests, setRequests] = useState(mockRequests)
+  const router = useRouter()
+  const [requests, setRequests] = useState<ConnectionRequest[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState("")
+  const [success, setSuccess] = useState("")
 
   useEffect(() => {
-    // Simulate API call
     const fetchRequests = async () => {
-      // In a real app, you would fetch data from your API
-      // const response = await fetch('/api/requests');
-      // const data = await response.json();
-      // setRequests(data);
-
-      // Using mock data for now
-      setTimeout(() => {
-        setRequests(mockRequests)
+      try {
+        const data = await getConnectionRequests()
+        // Filter only pending requests for the dashboard
+        setRequests(data.received.filter((req) => req.status === "pending"))
         setIsLoading(false)
-      }, 1000)
+      } catch (error) {
+        console.error("Failed to fetch requests:", error)
+        setError("Failed to load connection requests")
+        setIsLoading(false)
+      }
     }
 
     fetchRequests()
   }, [])
 
-  const handleAccept = (requestId: string) => {
-    setRequests(requests.map((request) => (request.id === requestId ? { ...request, status: "accepted" } : request)))
+  const handleAccept = async (requestId: string) => {
+    try {
+      await updateConnectionStatus(requestId, "accepted")
+
+      // Update local state
+      setRequests(requests.filter((req) => req.id !== requestId))
+
+      setSuccess("Connection request accepted")
+      setTimeout(() => setSuccess(""), 3000)
+    } catch (error) {
+      console.error("Failed to accept connection:", error)
+      setError("Failed to accept connection request")
+      setTimeout(() => setError(""), 3000)
+    }
   }
 
-  const handleReject = (requestId: string) => {
-    setRequests(requests.map((request) => (request.id === requestId ? { ...request, status: "rejected" } : request)))
+  const handleReject = async (requestId: string) => {
+    try {
+      await updateConnectionStatus(requestId, "rejected")
+
+      // Update local state
+      setRequests(requests.filter((req) => req.id !== requestId))
+
+      setSuccess("Connection request rejected")
+      setTimeout(() => setSuccess(""), 3000)
+    } catch (error) {
+      console.error("Failed to reject connection:", error)
+      setError("Failed to reject connection request")
+      setTimeout(() => setError(""), 3000)
+    }
+  }
+
+  const handleMessage = async (userId: string) => {
+    try {
+      // Create or get existing chat room
+      await createChatRoom(userId)
+
+      // Navigate to messages page
+      router.push("/dashboard/entrepreneur/message")
+    } catch (error) {
+      console.error("Failed to start conversation:", error)
+      setError("Failed to start conversation")
+      setTimeout(() => setError(""), 3000)
+    }
+  }
+
+  // Get initials for avatar
+  const getInitials = (name: string): string => {
+    return name
+      .split(" ")
+      .map((part) => part[0])
+      .join("")
+      .toUpperCase()
+      .substring(0, 2)
   }
 
   return (
@@ -71,6 +100,20 @@ export default function EntrepreneurDashboard() {
           <h1 className="text-3xl font-bold tracking-tight">Entrepreneur Dashboard</h1>
           <p className="text-muted-foreground">Welcome back! Here are your collaboration requests from investors.</p>
         </div>
+
+        {error && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
+        {success && (
+          <Alert className="bg-green-50 text-green-800 border-green-200">
+            <AlertCircle className="h-4 w-4 text-green-600" />
+            <AlertDescription>{success}</AlertDescription>
+          </Alert>
+        )}
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           <Card>
@@ -103,7 +146,7 @@ export default function EntrepreneurDashboard() {
               </svg>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{requests.filter((r) => r.status === "pending").length}</div>
+              <div className="text-2xl font-bold">{requests.length}</div>
               <p className="text-xs text-muted-foreground">Requests awaiting your response</p>
             </CardContent>
           </Card>
@@ -122,7 +165,7 @@ export default function EntrepreneurDashboard() {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-bold">Collaboration Requests</h2>
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" onClick={() => router.push("/dashboard/entrepreneur/connections")}>
               View All
             </Button>
           </div>
@@ -160,43 +203,27 @@ export default function EntrepreneurDashboard() {
                   <CardHeader className="p-4">
                     <div className="flex items-center gap-3">
                       <Avatar>
-                        <AvatarImage src="/placeholder.svg" alt={request.investor.name} />
-                        <AvatarFallback>{request.investor.initials}</AvatarFallback>
+                        <AvatarImage src="/placeholder.svg" alt={request.sender.name} />
+                        <AvatarFallback>{getInitials(request.sender.name)}</AvatarFallback>
                       </Avatar>
                       <div>
-                        <CardTitle className="text-base">{request.investor.name}</CardTitle>
+                        <CardTitle className="text-base">{request.sender.name}</CardTitle>
                         <CardDescription className="flex items-center gap-1">
-                          {request.investor.company}
+                          Investor
                           <Badge variant="outline" className="ml-2">
-                            Investor
+                            Pending
                           </Badge>
                         </CardDescription>
                       </div>
                     </div>
                   </CardHeader>
                   <CardContent className="p-4 pt-0">
+                    {request.message && <p className="text-sm text-muted-foreground mb-4">{request.message}</p>}
                     <div className="flex items-center justify-between">
                       <p className="text-sm text-muted-foreground">
                         Request received: {new Date(request.createdAt).toLocaleDateString()}
                       </p>
-                      <Badge
-                        variant={
-                          request.status === "accepted"
-                            ? "success"
-                            : request.status === "rejected"
-                              ? "destructive"
-                              : "outline"
-                        }
-                      >
-                        {request.status === "pending"
-                          ? "Pending"
-                          : request.status === "accepted"
-                            ? "Accepted"
-                            : "Rejected"}
-                      </Badge>
-                    </div>
-                    {request.status === "pending" && (
-                      <div className="mt-4 flex justify-end gap-2">
+                      <div className="flex gap-2">
                         <Button variant="outline" size="sm" onClick={() => handleReject(request.id)}>
                           <X className="mr-2 h-4 w-4" />
                           Decline
@@ -206,15 +233,7 @@ export default function EntrepreneurDashboard() {
                           Accept
                         </Button>
                       </div>
-                    )}
-                    {request.status === "accepted" && (
-                      <div className="mt-4 flex justify-end">
-                        <Button size="sm">
-                          <MessageSquare className="mr-2 h-4 w-4" />
-                          Message
-                        </Button>
-                      </div>
-                    )}
+                    </div>
                   </CardContent>
                 </Card>
               ))

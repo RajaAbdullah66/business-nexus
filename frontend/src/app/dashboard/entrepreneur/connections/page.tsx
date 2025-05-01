@@ -12,8 +12,11 @@ import ProtectedRoute from "@/components/protected-route"
 import { getConnectionRequests, updateConnectionStatus, type ConnectionRequest } from "@/services/connection-service"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AlertCircle } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { createChatRoom } from "@/services/chat-service"
 
 export default function EntrepreneurConnectionsPage() {
+  const router = useRouter()
   const [connections, setConnections] = useState<{
     received: ConnectionRequest[]
     sent: ConnectionRequest[]
@@ -79,6 +82,20 @@ export default function EntrepreneurConnectionsPage() {
     }
   }
 
+  const handleMessage = async (userId: string) => {
+    try {
+      // Create or get existing chat room
+      await createChatRoom(userId)
+
+      // Navigate to messages page
+      router.push("/dashboard/entrepreneur/message")
+    } catch (error) {
+      console.error("Failed to start conversation:", error)
+      setError("Failed to start conversation")
+      setTimeout(() => setError(""), 3000)
+    }
+  }
+
   // Get initials for avatar
   const getInitials = (name: string): string => {
     return name
@@ -107,9 +124,9 @@ export default function EntrepreneurConnectionsPage() {
 
           {success && (
             <Alert className="bg-green-50 text-green-800 border-green-200">
-            <AlertCircle className="h-4 w-4 text-green-600" />
-            <AlertDescription>{success}</AlertDescription>
-          </Alert>
+              <AlertCircle className="h-4 w-4 text-green-600" />
+              <AlertDescription>{success}</AlertDescription>
+            </Alert>
           )}
 
           <Tabs defaultValue="received">
@@ -201,7 +218,7 @@ export default function EntrepreneurConnectionsPage() {
                             </div>
                           )}
                           {connection.status === "accepted" && (
-                            <Button size="sm">
+                            <Button size="sm" onClick={() => handleMessage(connection.sender.id)}>
                               <MessageSquare className="mr-2 h-4 w-4" />
                               Message
                             </Button>
@@ -305,7 +322,7 @@ export default function EntrepreneurConnectionsPage() {
                             Request sent: {new Date(connection.createdAt).toLocaleDateString()}
                           </p>
                           {connection.status === "accepted" && (
-                            <Button size="sm">
+                            <Button size="sm" onClick={() => handleMessage(connection.receiver.id)}>
                               <MessageSquare className="mr-2 h-4 w-4" />
                               Message
                             </Button>
