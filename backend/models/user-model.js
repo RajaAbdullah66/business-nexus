@@ -1,3 +1,4 @@
+// models/user-model.js
 import mongoose from "mongoose"
 import bcrypt from "bcryptjs"
 
@@ -69,6 +70,15 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    // Online status fields
+    isOnline: {
+      type: Boolean,
+      default: false,
+    },
+    lastActive: {
+      type: Date,
+      default: Date.now,
+    },
     createdAt: {
       type: Date,
       default: Date.now,
@@ -90,8 +100,9 @@ userSchema.pre("save", async function (next) {
 })
 
 // Method to check if password is correct
-userSchema.methods.correctPassword = async (candidatePassword, userPassword) =>
-  await bcrypt.compare(candidatePassword, userPassword)
+userSchema.methods.correctPassword = async function(candidatePassword, userPassword) {
+  return await bcrypt.compare(candidatePassword, userPassword)
+}
 
 const User = mongoose.model("User", userSchema)
 

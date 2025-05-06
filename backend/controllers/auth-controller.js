@@ -1,3 +1,4 @@
+// controllers/auth-controller.js
 import jwt from "jsonwebtoken"
 import User from "../models/user-model.js"
 
@@ -42,6 +43,8 @@ export const register = async (req, res) => {
       email,
       password,
       role,
+      isOnline: true,
+      lastActive: Date.now()
     })
 
     // Generate token and send response
@@ -77,6 +80,11 @@ export const login = async (req, res) => {
       })
     }
 
+    // Update user's online status
+    user.isOnline = true
+    user.lastActive = Date.now()
+    await user.save({ validateBeforeSave: false })
+
     // If everything ok, send token to client
     createSendToken(user, 200, res)
   } catch (err) {
@@ -103,6 +111,27 @@ export const getCurrentUser = async (req, res) => {
     res.status(200).json({
       status: "success",
       user,
+    })
+  } catch (err) {
+    res.status(400).json({
+      status: "fail",
+      message: err.message,
+    })
+  }
+}
+
+// Logout user
+export const logout = async (req, res) => {
+  try {
+    // Update user's online status
+    await User.findByIdAndUpdate(req.user.id, {
+      isOnline: false,
+      lastActive: Date.now()
+    })
+
+    res.status(200).json({
+      status: "success",
+      message: "Logged out successfully"
     })
   } catch (err) {
     res.status(400).json({
